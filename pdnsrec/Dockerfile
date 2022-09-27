@@ -19,13 +19,11 @@ ENV CC="clang" \
 
 # dev package install
 RUN --mount=type=cache,target=/var/cache/apk \
-    apk add --update ${BUILD_PKGS}
-RUN mkdir -p /tmp/build
-## build
-RUN curl -fsSL "https://downloads.powerdns.com/releases/pdns-recursor-${VERSION}.tar.bz2" -o pdns-recursor.tar.bz2
-RUN tar xf pdns-recursor.tar.bz2 --strip-components=1 -C /tmp/build \
-    && rm pdns-recursor.tar.bz2
-RUN cd /tmp/build \
+    apk add --update ${BUILD_PKGS} \
+    apk add git
+WORKDIR cd /tmp
+RUN git clone https://github.com/PowerDNS/pdns \
+    && cd pdns/pdns \
     && ./configure \
       --prefix=/usr/local \
       --sysconfdir=/etc/powerdns \
@@ -43,7 +41,6 @@ RUN cd /tmp/build \
 RUN rm -rf /tmp/root/usr/local/share/man/*
 RUN ldconfig /
 
-
 # Intermediate container with runtime dependencies
 FROM arm64v8/alpine:latest AS runtime
 
@@ -55,7 +52,6 @@ RUN --mount=type=cache,target=/var/cache/apk \
     && rm -rf /var/cache/apk/* /usr/local/share/man/* /var/tmp \
     && adduser -DH pdns-recursor \
     && mkdir -p /var/lib/pdns-recursor/nod /var/lib/pdns-recursor/udr
-
 
 # Final container
 FROM runtime
